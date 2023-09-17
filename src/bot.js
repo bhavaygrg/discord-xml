@@ -1,4 +1,6 @@
 const { Client, GatewayIntentBits } = require('discord.js');
+const SorobanClient = require('soroban-client'); // Import Soroban Client
+
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
 });
@@ -74,7 +76,36 @@ client.on('messageCreate', async (message) => {
         // Send payment summary to the user
         message.channel.send(paymentSummary);
 
-        // Implement the next steps (confirm payment, create Stellar transaction, etc.)
+        // Check if the user wants to proceed with the payment
+        const filter = (response) => response.author.id === userId;
+        const userResponse = await message.channel.awaitMessages({ filter, max: 1, time: 30000 });
+
+        if (userResponse.size === 0 || userResponse.first().content.toLowerCase() !== 'confirm') {
+          message.channel.send('Payment canceled.');
+          return;
+        }
+
+        const userStellarAddress = 'USER_STELLAR_ADDRESS'; // Replace with the user's Stellar address
+        const amountXLM = getItemPrice(content); // Replace with the actual item price
+
+        try {
+          // Create the payment transaction
+          const transaction = await createPaymentTransaction(userStellarAddress, amountXLM);
+
+          // Submit the transaction to Soroban
+          const transactionResult = await sorobanServer.sendTransaction(transaction);
+
+          // Handle the transaction result and notify the user of the successful payment
+          if (transactionResult.isSuccess()) {
+            message.channel.send('Payment successful! Your item will be delivered.');
+          } else {
+            message.channel.send('Payment failed. Please try again later.');
+          }
+        } catch (error) {
+          // Handle any errors during the transaction process
+          message.channel.send('Payment failed. Please try again later.');
+          console.error(error);
+        }
       } else {
         message.channel.send('Insufficient funds to make the purchase.');
       }
@@ -104,4 +135,31 @@ function generatePaymentSummary(content, itemPrice) {
   return `You are about to purchase Item ${content} for ${itemPrice} XLM. Reply with 'confirm' to proceed.`;
 }
 
+// Configure Soroban Server
+const sorobanServer = new SorobanClient.Server('http://localhost:8000/soroban/rpc');
+
+// Create Payment Transaction Function
+async function createPaymentTransaction(userStellarAddress, amountXLM) {
+  // Construct a transaction
+  const transaction = new SorobanClient.TransactionBuilder(
+    await sorobanServer.getAccount(shopStellarAddress),
+    { fee: 100, networkPassphrase: SorobanClient.Networks.STANDALONE }
+  )
+    .addOperation(
+      SorobanClient.Operation.payment({
+        destination: userStellarAddress,
+        asset: SorobanClient.Asset.native(),
+        amount: amountXLM.toString(),
+      })
+    )
+    .setTimeout(30)
+    .build();
+
+  // Sign the transaction
+  transaction.sign(SorobanClient.Keypair.fromSecret('YOUR_SHOP_SECRET_KEY'));
+
+  return transaction;
+}
+
+// Log in to Discord with your bot token
 client.login('YOUR_BOT_TOKEN_HERE');
