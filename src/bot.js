@@ -1,12 +1,13 @@
-//his step involves building the functionality to enable users to make payments using Stellar Lumens (XLM) within your Discord shop.
-
-
 const { Client, GatewayIntentBits } = require('discord.js');
-
-// Create a new Discord bot instance
 const client = new Client({
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
 });
+
+// Placeholder for user balances (replace with your user wallet logic)
+const userBalances = {};
+
+// Placeholder for the shop's Stellar wallet address (replace with your shop's wallet)
+const shopStellarAddress = 'GASOCNHNNLYFNMDJYQ3XFMI7BYHIOCFW3GJEOWRPEGK2TDPGTG2E5EDW';
 
 // Event handler for when the bot is ready
 client.once('ready', () => {
@@ -14,48 +15,14 @@ client.once('ready', () => {
 });
 
 // Event handler for incoming messages
-client.on('messageCreate', (message) => {
-  if (message.content === '!ping') {
-    message.reply('Pong!');
-  }
-});
-client.on('messageCreate', (message) => {
-  // Check if the message is from a user and starts with the !shop command
-  if (message.author.bot || !message.content.startsWith('!shop')) {
-    return;
-  }
-
-  // Define your shop items (sample data)
-  const shopItems = [
-    {
-      name: 'Item 1',
-      description: 'Description of Item 1',
-      price: 10,
-    },
-    {
-      name: 'Item 2',
-      description: 'Description of Item 2',
-      price: 20,
-    },
-    // Add more items as needed
-  ];
-
-  // Display the shop items
-  const shopMessage = shopItems.map((item, index) => {
-    return `**${index + 1}. ${item.name}** - Price: ${item.price} coins\n${item.description}\n`;
-  });
-
-  message.channel.send(`**Welcome to the Shop!**\n\n${shopMessage.join('\n')}`);
-});
-client.on('messageCreate', (message) => {
-  // Check if the message is from a user and starts with a valid command
-  if (message.author.bot) {
-    return;
-  }
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
 
   const content = message.content.toLowerCase();
 
-  if (content.startsWith('!shop')) {
+  if (content === '!ping') {
+    message.reply('Pong!');
+  } else if (content.startsWith('!shop')) {
     // Display available shop items (sample data)
     const shopItems = [
       {
@@ -92,9 +59,49 @@ client.on('messageCreate', (message) => {
     } else {
       message.channel.send('Invalid command. Use !item [item_number] to view item details.');
     }
+  } else if (content.startsWith('!buy')) {
+    // Placeholder for item price (replace with your item pricing logic)
+    const itemPrice = getItemPrice(content);
+
+    if (itemPrice !== null) {
+      const userId = message.author.id;
+
+      // Check if the user has enough balance (replace with your user wallet logic)
+      if (userBalances[userId] >= itemPrice) {
+        // Placeholder for generating payment summary
+        const paymentSummary = generatePaymentSummary(content, itemPrice);
+
+        // Send payment summary to the user
+        message.channel.send(paymentSummary);
+
+        // Implement the next steps (confirm payment, create Stellar transaction, etc.)
+      } else {
+        message.channel.send('Insufficient funds to make the purchase.');
+      }
+    } else {
+      message.channel.send('Invalid item number.');
+    }
   }
 });
 
+// Placeholder for getting item price based on item number
+function getItemPrice(content) {
+  // Replace with your item pricing logic
+  // Example: parse item price from the command
+  const args = content.split(' ');
+  if (args.length === 2 && !isNaN(args[1])) {
+    const itemNumber = parseInt(args[1]);
+    if (itemNumber === 1) return 10;
+    if (itemNumber === 2) return 20;
+  }
+  return null; // Item not found
+}
 
-// Log in to Discord with your bot token
+// Placeholder for generating payment summary
+function generatePaymentSummary(content, itemPrice) {
+  // Replace with your payment summary generation logic
+  // Example: return a formatted payment summary
+  return `You are about to purchase Item ${content} for ${itemPrice} XLM. Reply with 'confirm' to proceed.`;
+}
+
 client.login('YOUR_BOT_TOKEN_HERE');
